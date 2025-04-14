@@ -1,0 +1,93 @@
+import time
+from adafruit_servokit import ServoKit
+
+# Initialize ServoKit for the PWA board.
+kit = ServoKit(channels=16)
+
+# Specify the channels you are using on the PWM driver
+channel_servo1 = 0
+channel_motor1 = 2		# Motor or continuous rotation servo
+
+# To set the servo range to 180 degrees for the standard servos
+# You can adjust the values if needed
+kit.servo[channel_servo1].set_pulse_width_range(400,2300)
+kit.continuous_servo[channel_motor1].set_pulse_width_range(1200,1800)
+    
+
+print("Press CTRL+C to end the program.")
+
+
+# Keep track of the state
+FSM1State = 0
+FSM1NextState = 0
+
+# Keep track of the timing
+FSM1LastTime = 0
+duration = 2
+
+# Main program 
+try:
+        
+    noError = True
+    while noError:
+
+        # Check the current time
+        currentTime = time.time()
+
+        # Update the state
+        FSM1State = FSM1NextState
+
+
+        # Check the state transitions for FSM 1
+        # This is a Mealy FSM
+        # State 0: angle of 0 on channel 0 or on the way there
+        if (FSM1State == 0):        
+
+            if (currentTime - FSM1LastTime > duration):
+                
+                channel = channel_servo1
+                angle = 0
+                kit.servo[channel].angle = angle
+                print ('angle: {0} \t channel: {1}'.format(angle,channel))
+                
+                channel = channel_motor1
+                speed = 1
+                kit.continuous_servo[channel].throttle = speed
+                print ('speed: {0} \t channel: {1}'.format(speed,channel))
+                
+                FSM1NextState = 1
+            else:
+                FSM1NextState = 0
+
+        # State 1: angle of 45 on channel 0 or on the way there
+        elif (FSM1State == 1):      
+
+            if (currentTime - FSM1LastTime > duration):
+                
+                channel = channel_servo1
+                angle = 100
+                kit.servo[channel].angle = angle
+                print ('angle: {0} \t channel: {1}'.format(angle,channel))
+                
+                channel = channel_motor1
+                speed = -1
+                kit.continuous_servo[channel].throttle = speed
+                print ('speed: {0} \t channel: {1}'.format(speed,channel))
+                
+                FSM1NextState = 0
+            else:
+                FSM1NextState = 1
+                
+        # State ??
+        else:
+            print("Error: unrecognized state for FSM1")
+            
+        # If there is a state change, record the time    
+        if (FSM1State != FSM1NextState):
+            FSM1LastTime = currentTime
+ 
+            
+# Quit the program when the user presses CTRL + C
+except KeyboardInterrupt:
+        channel = channel_motor1
+        kit.continuous_servo[channel].throttle = 0 
